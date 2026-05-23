@@ -15,7 +15,7 @@ public class OpenApiConfig {
     public OpenAPI smsOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Turggut SMS API")
+                        .title("OBS API")
                         .description("Student Management System REST API")
                         .version("1.0.0"))
                 .components(new Components()

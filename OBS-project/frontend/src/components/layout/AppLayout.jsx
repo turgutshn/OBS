@@ -48,7 +48,7 @@ export function AppLayout() {
             T
           </div>
           <div>
-            <div className="text-sm font-semibold text-slate-900">Turggut SMS</div>
+            <div className="text-sm font-semibold text-slate-900">OBS</div>
             <div className="text-xs text-slate-500">{portalTitle}</div>
           </div>
         </div>

@@ -45,7 +45,7 @@ export function Login() {
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
             <ShieldCheck size={26} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Turggut SMS</h1>
+          <h1 className="text-2xl font-bold text-slate-900">OBS</h1>
           <p className="mt-1 text-sm text-slate-500">Öğrenci Yönetim Sistemine giriş yapın</p>
         </div>
 
