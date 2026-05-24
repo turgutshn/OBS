@@ -78,9 +78,7 @@ export function Login() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
-          Güvenli giriş • JWT + Refresh Token • Şifreler bcrypt ile saklanır
-        </p>
+        
       </div>
     </div>
   );
