@@ -1,4 +1,4 @@
-# Turggut Öğrenci Yönetim Sistemi
+#  Öğrenci Yönetim Sistemi
 
 Java 21 / Spring Boot 3 backend ve React + Vite + Tailwind frontend ile kurumsal kalitede bir öğrenci yönetim platformu.
 
@@ -98,9 +98,6 @@ mvn spring-boot:run
 Backend `http://localhost:8080` üzerinde çalışır.
 Swagger UI: `http://localhost:8080/swagger-ui.html`
 
-Bootstrap admin (ilk açılışta otomatik üretilir):
-- Kullanıcı adı: `admin`
-- Parola: `Admin!2345` (veya `BOOTSTRAP_ADMIN_PASSWORD`)
 
 > İlk girişten sonra parolayı mutlaka değiştirin.
 
