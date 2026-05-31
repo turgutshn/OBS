@@ -1,6 +1,6 @@
 package com.turggut.sms.unit;
 
-import com.turggut.sms.service.GradeCalculator;
+import com.turggut.sms.enrollment.service.GradeCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

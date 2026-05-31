@@ -1,9 +1,9 @@
 package com.turggut.sms.unit;
 
-import com.turggut.sms.config.AppProperties;
-import com.turggut.sms.domain.user.Role;
-import com.turggut.sms.domain.user.User;
-import com.turggut.sms.security.JwtTokenProvider;
+import com.turggut.sms.shared.config.AppProperties;
+import com.turggut.sms.iam.domain.Role;
+import com.turggut.sms.iam.domain.User;
+import com.turggut.sms.shared.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.Test;
 

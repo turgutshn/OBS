@@ -37,19 +37,32 @@ Java 21 / Spring Boot 3 backend ve React + Vite + Tailwind frontend ile kurumsal
 - `AUDIT` etiketli iş logları + DB'de `audit_logs` tablosu
 - Her isteğe otomatik `X-Request-Id` (yoksa üretilir)
 
-## Mimari
+## Mimari (DDD — Bounded Context'lere göre paketleme)
+
+Backend, teknik katmanlara (controller/service/domain) göre değil, **iş alanlarına (bounded context)** göre paketlenmiştir. Her üst seviye paket bağımsız bir iş bağlamıdır ve kendi içinde `domain` (entity + repository), `service`, `web` (controller) ve `dto` alt paketlerini barındırır. Çapraz kesen (cross-cutting) altyapı `shared` çekirdeğinde toplanır.
 
 ```
 turggut/
-├── backend/                # Spring Boot 3.3 + Java 21
-│   ├── src/main/java/com/turggut/sms
-│   │   ├── config/         # Security, AppProperties, Bootstrap, OpenAPI
-│   │   ├── security/       # JWT, filters, rate limit, request id
-│   │   ├── domain/         # User, Student, Teacher, Course, Enrollment, Fee, Audit, Token
-│   │   ├── service/        # Business logic (Auth, Student, Teacher, Course, Enrollment, Fee, Transcript, Report, Audit, Grade)
-│   │   ├── controller/     # REST controllers
-│   │   ├── dto/            # Request/Response records
-│   │   └── exception/      # ApiException + GlobalExceptionHandler
+├── backend/                # Spring Boot 3.4 + Java 21
+│   └── src/main/java/com/turggut/sms
+│       ├── SmsApplication.java
+│       ├── shared/             # Çekirdek / cross-cutting
+│       │   ├── config/         # Security, AppProperties, Bootstrap, OpenAPI, AppConfig
+│       │   ├── security/       # JWT, filters, rate limit, request id, SecurityUtils
+│       │   ├── domain/         # BaseAuditedEntity
+│       │   ├── dto/            # PageResponse
+│       │   └── exception/      # ApiException + GlobalExceptionHandler
+│       ├── iam/                # Identity & Access: kullanıcı, kimlik doğrulama
+│       │   ├── domain/         # User, Role, RefreshToken (+ repositories)
+│       │   ├── dto/            # Login/Refresh/PasswordChange/AuthResponse
+│       │   ├── service/        # AuthService, AuthSecurityService
+│       │   └── web/            # AuthController
+│       ├── student/            # domain · dto · service · web
+│       ├── teacher/            # domain · dto · service · web
+│       ├── course/             # domain · dto · service · web
+│       ├── enrollment/         # Enrollment + GradeCalculator (domain·dto·service·web)
+│       ├── fee/                # domain · dto · service · web
+│       └── reporting/          # Report + Transcript + Audit (domain·dto·service·web)
 │   └── src/main/resources/db/migration/V1__init_schema.sql  # Flyway
 └── frontend/               # Vite + React + Tailwind
     └── src/
@@ -59,6 +72,12 @@ turggut/
         ├── pages/admin     # Admin sayfaları
         └── pages/student   # Öğrenci sayfaları
 ```
+
+### Neden DDD / bounded-context paketleme?
+
+**Neden bunu yaptık?** Klasik katmanlı yapıda (`controller/`, `service/`, `domain/`) bir iş alanına ait kod tüm proje boyunca dağılır; bir özelliği değiştirmek için 4-5 ayrı paket gezilir. Bounded-context yapısında ise her iş alanının tüm kodu **tek bir paket altında, yüksek uyum (high cohesion)** ile durur. Asıl kazanç **ileride microservice'e ayırma** kolaylığıdır: `enrollment` veya `fee` paketini ayrı bir servise taşımak, bir paketi kesip taşımak kadar nettir — sınırlar zaten kod içinde görünür. Bağlamlar arası bağımlılıklar (ör. servislerin `reporting` içindeki audit log'a erişmesi) açık `import`'larla görünür hale gelir; bu da gelecekte hangi bağların API/event'e dönüştürülmesi gerektiğini işaret eder. `shared` çekirdeği yalnızca gerçekten ortak olan altyapıyı barındırır, böylece bağlamlar birbirine sızmaz.
+
+> Bu yeniden yapılanma davranışı değiştirmez — 79 testin tamamı ve %80 kapsam kapısı yapı değişikliğinden sonra da geçer.
 
 ## Gereksinimler
 

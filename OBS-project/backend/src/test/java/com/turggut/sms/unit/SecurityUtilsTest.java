@@ -1,9 +1,9 @@
 package com.turggut.sms.unit;
 
-import com.turggut.sms.domain.user.Role;
-import com.turggut.sms.domain.user.User;
-import com.turggut.sms.security.AuthenticatedUser;
-import com.turggut.sms.security.SecurityUtils;
+import com.turggut.sms.iam.domain.Role;
+import com.turggut.sms.iam.domain.User;
+import com.turggut.sms.shared.security.AuthenticatedUser;
+import com.turggut.sms.shared.security.SecurityUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

@@ -1,15 +1,15 @@
 package com.turggut.sms.unit;
 
-import com.turggut.sms.domain.fee.Fee;
-import com.turggut.sms.domain.fee.FeeRepository;
-import com.turggut.sms.domain.student.Student;
-import com.turggut.sms.domain.student.StudentRepository;
-import com.turggut.sms.domain.user.User;
-import com.turggut.sms.dto.fee.FeeRequest;
-import com.turggut.sms.dto.fee.FeeResponse;
-import com.turggut.sms.exception.ApiException;
-import com.turggut.sms.service.AuditLogService;
-import com.turggut.sms.service.FeeService;
+import com.turggut.sms.fee.domain.Fee;
+import com.turggut.sms.fee.domain.FeeRepository;
+import com.turggut.sms.student.domain.Student;
+import com.turggut.sms.student.domain.StudentRepository;
+import com.turggut.sms.iam.domain.User;
+import com.turggut.sms.fee.dto.FeeRequest;
+import com.turggut.sms.fee.dto.FeeResponse;
+import com.turggut.sms.shared.exception.ApiException;
+import com.turggut.sms.reporting.service.AuditLogService;
+import com.turggut.sms.fee.service.FeeService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

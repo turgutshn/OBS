@@ -1,7 +1,7 @@
 package com.turggut.sms.unit;
 
-import com.turggut.sms.config.AppProperties;
-import com.turggut.sms.security.RateLimitingFilter;
+import com.turggut.sms.shared.config.AppProperties;
+import com.turggut.sms.shared.security.RateLimitingFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
