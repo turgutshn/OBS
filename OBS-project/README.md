@@ -142,6 +142,73 @@ Frontend `http://localhost:5173` üzerinde çalışır. Vite, `/api` isteklerini
 8. **Raporlar** ve **Denetim Kayıtları** ile sistemi izleyin.
 9. Üretilen kullanıcı adı/parola ile öğrenci/öğretmen olarak giriş yapıp kendi panellerini test edin.
 
+## Test & Kod Kalitesi
+
+### Test Mimarisi
+
+Proje **unit test** ve **integration test**'i ayırmıştır:
+
+- **Unit Tests** (`src/test/java/com/turggut/sms/unit/`): 
+  - Tek bir bileşeni (service, utility) izole ortamda test eder
+  - Mock bağımlılıklar kullanır
+  - Hızlı, veritabanı gerektirmez
+  - Dosyalar: `*ServiceUnitTest.java`, `*Test.java` (40+ test)
+
+- **Integration Tests** (`src/test/java/com/turggut/sms/integration/`):
+  - Tam Spring Boot konteksti başlatır
+  - Gerçek veya H2 in-memory veritabanı kullanır
+  - Database tabaka, transaction, Spring komponenti etkileşimlerini test eder
+  - Dosyalar: `*IntegrationTest.java` (8+ test)
+
+### Code Coverage (Jacoco)
+
+**Hedef:** Kod satırlarının minimum **%80'i** test kapsamında olmalı.
+
+**Jakoco Plugin** `pom.xml`'de konfigüre edilmiş:
+```xml
+<property>
+  <name>coverage.minimum</name>
+  <value>0.80</value>  <!-- %80 threshold -->
+</property>
+```
+
+**Test çalıştırma ve coverage raporu oluşturma:**
+
+```bash
+# Backend klasörine gir
+cd backend
+
+# Maven ile test çalıştır ve coverage kontrol et
+mvn clean verify
+
+# Coverage raporu (HTML) oluşturulur
+# target/site/jacoco/index.html adresinde görüntüle
+```
+
+**Docker ile test çalıştırma** (Maven kurulu değilse):
+```bash
+cd backend
+docker run --rm -v $(pwd):/app -w /app maven:3.9-eclipse-temurin-21 mvn clean verify
+```
+
+**Coverage raporu çıktısı:**
+- `target/site/jacoco/index.html` — HTML report
+- `target/jacoco.exec` — binary coverage data
+- Build fail eder eğer coverage %80 altında kalırsa ❌
+
+### Neden %80?
+
+1. **Gerçekçi Hedef**: %100 ulaşılamaz/gereksiz (test yazmanın getirisi azalır)
+2. **Yüksek Güvenilirlik**: %80 kritik yollar (business logic, security) için yeterli
+3. **Bakım Kolaylığı**: Kod değişikliklerinde güven verir; refactor sırasında regressyon bulur
+4. **Regresyon Erken Tespiti**: Yeni hata oluştuysa test fail eder; merge öncesi yakalar
+
+### Test Dosya Örnekleri
+
+- `StudentServiceUnitTest.java` — create, update, delete, search ve hata senaryoları
+- `AuthIntegrationTest.java` — login, token refresh, rate limiting
+- `EnrollmentIntegrationTest.java` — grade calculation, GANO otomasyonu, veri tutarlılığı
+
 ## Endpoint Özeti
 
 | Yöntem | Yol | Yetki |
