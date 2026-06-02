@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +40,7 @@ public class TeacherService {
         if (userRepository.existsByEmail(request.email())) {
             throw ApiException.conflict("duplicate_email", "Email already in use");
         }
-        String username = request.employeeNumber().toLowerCase();
+        String username = request.employeeNumber().toLowerCase(Locale.ROOT);
         if (userRepository.existsByUsername(username)) {
             throw ApiException.conflict("duplicate_username", "Username already in use");
         }

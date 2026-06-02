@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReportService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.reporting.service</a> &gt; <span class="el_source">ReportService.java</span></div><h1>ReportService.java</h1><pre class="source lang-java linenums">package com.turggut.sms.reporting.service;
+
+import com.turggut.sms.course.domain.CourseRepository;
+import com.turggut.sms.enrollment.domain.EnrollmentRepository;
+import com.turggut.sms.fee.domain.Fee;
+import com.turggut.sms.fee.domain.FeeRepository;
+import com.turggut.sms.student.domain.StudentRepository;
+import com.turggut.sms.teacher.domain.TeacherRepository;
+import com.turggut.sms.reporting.dto.SummaryReport;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class ReportService {
+
+    private final StudentRepository studentRepository;
+    private final TeacherRepository teacherRepository;
+    private final CourseRepository courseRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final FeeRepository feeRepository;
+    private final AuditLogService auditLogService;
+
+    @Transactional
+    public SummaryReport summary() {
+<span class="fc" id="L32">        auditLogService.success(&quot;REPORT_SUMMARY&quot;, &quot;Report&quot;, null, null);</span>
+
+<span class="fc" id="L34">        Map&lt;String, Long&gt; studentsByDept = studentRepository.findAll().stream()</span>
+<span class="fc" id="L35">                .collect(Collectors.groupingBy(</span>
+<span class="pc bpc" id="L36" title="1 of 2 branches missed.">                        s -&gt; s.getDepartment() == null ? &quot;Unassigned&quot; : s.getDepartment(),</span>
+<span class="fc" id="L37">                        TreeMap::new, Collectors.counting()));</span>
+
+<span class="fc" id="L39">        Map&lt;String, Long&gt; coursesByDept = courseRepository.findAll().stream()</span>
+<span class="fc" id="L40">                .collect(Collectors.groupingBy(</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">                        c -&gt; c.getDepartment() == null ? &quot;Unassigned&quot; : c.getDepartment(),</span>
+<span class="fc" id="L42">                        TreeMap::new, Collectors.counting()));</span>
+
+<span class="fc" id="L44">        var fees = feeRepository.findAll();</span>
+<span class="fc" id="L45">        BigDecimal assessed = fees.stream().map(Fee::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);</span>
+<span class="fc" id="L46">        BigDecimal collected = fees.stream().map(Fee::getPaidAmount).reduce(BigDecimal.ZERO, BigDecimal::add);</span>
+<span class="fc" id="L47">        BigDecimal outstanding = assessed.subtract(collected);</span>
+
+<span class="fc" id="L49">        Map&lt;String, Long&gt; feesByStatus = fees.stream()</span>
+<span class="fc" id="L50">                .collect(Collectors.groupingBy(f -&gt; f.getStatus().name(),</span>
+<span class="fc" id="L51">                        TreeMap::new, Collectors.counting()));</span>
+
+<span class="fc" id="L53">        return new SummaryReport(</span>
+<span class="fc" id="L54">                studentRepository.count(),</span>
+<span class="fc" id="L55">                teacherRepository.count(),</span>
+<span class="fc" id="L56">                courseRepository.count(),</span>
+<span class="fc" id="L57">                enrollmentRepository.count(),</span>
+                assessed,
+                collected,
+                outstanding,
+                studentsByDept,
+                coursesByDept,
+                feesByStatus);
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

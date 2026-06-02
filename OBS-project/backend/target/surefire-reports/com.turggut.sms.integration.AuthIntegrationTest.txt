@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.turggut.sms.integration.AuthIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 25.90 s -- in com.turggut.sms.integration.AuthIntegrationTest

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GradeCalculator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.enrollment.service</a> &gt; <span class="el_source">GradeCalculator.java</span></div><h1>GradeCalculator.java</h1><pre class="source lang-java linenums">package com.turggut.sms.enrollment.service;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+public final class GradeCalculator {
+
+    private GradeCalculator() {}
+
+    public static BigDecimal weightedTotal(BigDecimal midterm, BigDecimal finalGrade) {
+<span class="fc bfc" id="L11" title="All 4 branches covered.">        if (midterm == null &amp;&amp; finalGrade == null) return null;</span>
+<span class="fc bfc" id="L12" title="All 2 branches covered.">        BigDecimal mid = midterm == null ? BigDecimal.ZERO : midterm;</span>
+<span class="fc bfc" id="L13" title="All 2 branches covered.">        BigDecimal fin = finalGrade == null ? BigDecimal.ZERO : finalGrade;</span>
+        // 40% midterm + 60% final
+<span class="fc" id="L15">        return mid.multiply(new BigDecimal(&quot;0.40&quot;))</span>
+<span class="fc" id="L16">                .add(fin.multiply(new BigDecimal(&quot;0.60&quot;)))</span>
+<span class="fc" id="L17">                .setScale(2, RoundingMode.HALF_UP);</span>
+    }
+
+    public static String letterGrade(BigDecimal total) {
+<span class="fc bfc" id="L21" title="All 2 branches covered.">        if (total == null) return null;</span>
+<span class="fc" id="L22">        double t = total.doubleValue();</span>
+<span class="fc bfc" id="L23" title="All 2 branches covered.">        if (t &gt;= 90) return &quot;AA&quot;;</span>
+<span class="fc bfc" id="L24" title="All 2 branches covered.">        if (t &gt;= 85) return &quot;BA&quot;;</span>
+<span class="fc bfc" id="L25" title="All 2 branches covered.">        if (t &gt;= 80) return &quot;BB&quot;;</span>
+<span class="fc bfc" id="L26" title="All 2 branches covered.">        if (t &gt;= 75) return &quot;CB&quot;;</span>
+<span class="fc bfc" id="L27" title="All 2 branches covered.">        if (t &gt;= 65) return &quot;CC&quot;;</span>
+<span class="fc bfc" id="L28" title="All 2 branches covered.">        if (t &gt;= 58) return &quot;DC&quot;;</span>
+<span class="fc bfc" id="L29" title="All 2 branches covered.">        if (t &gt;= 50) return &quot;DD&quot;;</span>
+<span class="fc bfc" id="L30" title="All 2 branches covered.">        if (t &gt;= 40) return &quot;FD&quot;;</span>
+<span class="fc" id="L31">        return &quot;FF&quot;;</span>
+    }
+
+    public static BigDecimal gradePoint(String letter) {
+<span class="fc bfc" id="L35" title="All 2 branches covered.">        if (letter == null) return null;</span>
+<span class="fc bfc" id="L36" title="All 10 branches covered.">        return switch (letter) {</span>
+<span class="fc" id="L37">            case &quot;AA&quot; -&gt; new BigDecimal(&quot;4.00&quot;);</span>
+<span class="fc" id="L38">            case &quot;BA&quot; -&gt; new BigDecimal(&quot;3.50&quot;);</span>
+<span class="fc" id="L39">            case &quot;BB&quot; -&gt; new BigDecimal(&quot;3.00&quot;);</span>
+<span class="fc" id="L40">            case &quot;CB&quot; -&gt; new BigDecimal(&quot;2.50&quot;);</span>
+<span class="fc" id="L41">            case &quot;CC&quot; -&gt; new BigDecimal(&quot;2.00&quot;);</span>
+<span class="fc" id="L42">            case &quot;DC&quot; -&gt; new BigDecimal(&quot;1.50&quot;);</span>
+<span class="fc" id="L43">            case &quot;DD&quot; -&gt; new BigDecimal(&quot;1.00&quot;);</span>
+<span class="fc" id="L44">            case &quot;FD&quot; -&gt; new BigDecimal(&quot;0.50&quot;);</span>
+<span class="fc" id="L45">            case &quot;FF&quot; -&gt; BigDecimal.ZERO;</span>
+<span class="fc" id="L46">            default -&gt; null;</span>
+        };
+    }
+
+    public static boolean isPassing(String letter) {
+<span class="fc bfc" id="L51" title="All 2 branches covered.">        if (letter == null) return false;</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        return switch (letter) {</span>
+<span class="fc" id="L53">            case &quot;AA&quot;, &quot;BA&quot;, &quot;BB&quot;, &quot;CB&quot;, &quot;CC&quot;, &quot;DC&quot;, &quot;DD&quot; -&gt; true;</span>
+<span class="fc" id="L54">            default -&gt; false;</span>
+        };
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

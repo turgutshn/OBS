@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeeResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.fee.dto</a> &gt; <span class="el_source">FeeResponse.java</span></div><h1>FeeResponse.java</h1><pre class="source lang-java linenums">package com.turggut.sms.fee.dto;
+
+import com.turggut.sms.fee.domain.Fee;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+
+<span class="fc" id="L9">public record FeeResponse(</span>
+        Long id,
+        Long studentId,
+        String studentNumber,
+        String studentName,
+        String semester,
+        BigDecimal amount,
+        BigDecimal paidAmount,
+        BigDecimal outstanding,
+        LocalDate dueDate,
+        Instant paidAt,
+        String status,
+        String description) {
+
+    public static FeeResponse from(Fee f) {
+<span class="fc" id="L24">        return new FeeResponse(</span>
+<span class="fc" id="L25">                f.getId(),</span>
+<span class="fc" id="L26">                f.getStudent().getId(),</span>
+<span class="fc" id="L27">                f.getStudent().getStudentNumber(),</span>
+<span class="fc" id="L28">                f.getStudent().getFullName(),</span>
+<span class="fc" id="L29">                f.getSemester(),</span>
+<span class="fc" id="L30">                f.getAmount(),</span>
+<span class="fc" id="L31">                f.getPaidAmount(),</span>
+<span class="fc" id="L32">                f.getOutstanding(),</span>
+<span class="fc" id="L33">                f.getDueDate(),</span>
+<span class="fc" id="L34">                f.getPaidAt(),</span>
+<span class="fc" id="L35">                f.getStatus().name(),</span>
+<span class="fc" id="L36">                f.getDescription());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

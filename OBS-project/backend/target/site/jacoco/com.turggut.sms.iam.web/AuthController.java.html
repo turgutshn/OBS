@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.iam.web</a> &gt; <span class="el_source">AuthController.java</span></div><h1>AuthController.java</h1><pre class="source lang-java linenums">package com.turggut.sms.iam.web;
+
+import com.turggut.sms.iam.dto.AuthResponse;
+import com.turggut.sms.iam.dto.LoginRequest;
+import com.turggut.sms.iam.dto.PasswordChangeRequest;
+import com.turggut.sms.iam.dto.RefreshRequest;
+import com.turggut.sms.iam.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api/auth&quot;)
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthService authService;
+
+    @PostMapping(&quot;/login&quot;)
+    public AuthResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+<span class="fc" id="L24">        return authService.login(request, http);</span>
+    }
+
+    @PostMapping(&quot;/refresh&quot;)
+    public AuthResponse refresh(@Valid @RequestBody RefreshRequest request, HttpServletRequest http) {
+<span class="fc" id="L29">        return authService.refresh(request.refreshToken(), http);</span>
+    }
+
+    @PostMapping(&quot;/logout&quot;)
+    public ResponseEntity&lt;Void&gt; logout(@RequestBody(required = false) RefreshRequest request) {
+<span class="fc bfc" id="L34" title="All 2 branches covered.">        if (request != null) {</span>
+<span class="fc" id="L35">            authService.logout(request.refreshToken());</span>
+        }
+<span class="fc" id="L37">        return ResponseEntity.noContent().build();</span>
+    }
+
+    @PostMapping(&quot;/logout-all&quot;)
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;Void&gt; logoutAll() {
+<span class="fc" id="L43">        authService.logoutAll();</span>
+<span class="fc" id="L44">        return ResponseEntity.noContent().build();</span>
+    }
+
+    @PostMapping(&quot;/change-password&quot;)
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public ResponseEntity&lt;Void&gt; changePassword(@Valid @RequestBody PasswordChangeRequest request) {
+<span class="fc" id="L50">        authService.changePassword(request);</span>
+<span class="fc" id="L51">        return ResponseEntity.noContent().build();</span>
+    }
+
+    @GetMapping(&quot;/me&quot;)
+    @PreAuthorize(&quot;isAuthenticated()&quot;)
+    public AuthResponse.UserInfo me() {
+<span class="fc" id="L57">        return authService.currentUserInfo().user();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

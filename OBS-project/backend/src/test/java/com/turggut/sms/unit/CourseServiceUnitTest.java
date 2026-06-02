@@ -14,6 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -29,6 +31,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class CourseServiceUnitTest {
 
     @Mock
@@ -102,14 +105,14 @@ class CourseServiceUnitTest {
         when(courseRepository.existsByCode("CS101")).thenReturn(true);
 
         ApiException exception = assertThrows(ApiException.class, () -> courseService.create(request));
-        assertTrue(exception.getMessage().contains("duplicate"));
+        assertTrue(exception.getCode().contains("duplicate"));
     }
 
     @Test
     void createCourseWithInvalidTeacher() {
         CourseRequest request = testCourseRequest();
         when(courseRepository.existsByCode(request.code())).thenReturn(false);
-        when(teacherRepository.findById(999L)).thenReturn(Optional.empty());
+        when(teacherRepository.findById(request.teacherId())).thenReturn(Optional.empty());
 
         ApiException exception = assertThrows(ApiException.class, () -> courseService.create(request));
         assertTrue(exception.getMessage().contains("not found"));

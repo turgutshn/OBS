@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AppProperties.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.shared.config</a> &gt; <span class="el_source">AppProperties.java</span></div><h1>AppProperties.java</h1><pre class="source lang-java linenums">package com.turggut.sms.shared.config;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.util.List;
+
+@ConfigurationProperties(prefix = &quot;app&quot;)
+<span class="fc" id="L8">public record AppProperties(Security security, Bootstrap bootstrap) {</span>
+
+<span class="fc" id="L10">    public record Security(Jwt jwt, Cors cors, RateLimit rateLimit, Password password) {}</span>
+
+<span class="fc" id="L12">    public record Jwt(</span>
+            String issuer,
+            int accessTokenTtlMinutes,
+            int refreshTokenTtlDays,
+            String secret) {}
+
+<span class="fc" id="L18">    public record Cors(List&lt;String&gt; allowedOrigins) {}</span>
+
+<span class="fc" id="L20">    public record RateLimit(int authRequestsPerMinute, int apiRequestsPerMinute) {}</span>
+
+<span class="fc" id="L22">    public record Password(int minLength, int lockoutThreshold, int lockoutDurationMinutes) {}</span>
+
+<span class="fc" id="L24">    public record Bootstrap(String adminUsername, String adminPassword, String adminEmail) {}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

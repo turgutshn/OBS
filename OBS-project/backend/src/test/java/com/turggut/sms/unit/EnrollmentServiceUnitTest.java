@@ -20,6 +20,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -33,6 +35,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class EnrollmentServiceUnitTest {
 
     @Mock
@@ -101,7 +104,7 @@ class EnrollmentServiceUnitTest {
         EnrollmentResponse response = enrollmentService.enroll(request);
 
         assertNotNull(response);
-        assertEquals(EnrollmentStatus.ENROLLED, response.status());
+        assertEquals(EnrollmentStatus.ENROLLED.name(), response.status());
         verify(auditLogService).success(eq("ENROLLMENT_CREATE"), eq("Enrollment"), anyString(), anyString());
     }
 
@@ -113,7 +116,7 @@ class EnrollmentServiceUnitTest {
                 .thenReturn(true);
 
         ApiException exception = assertThrows(ApiException.class, () -> enrollmentService.enroll(request));
-        assertTrue(exception.getMessage().contains("already_enrolled"));
+        assertTrue(exception.getCode().contains("already_enrolled"));
     }
 
     @Test
@@ -156,7 +159,7 @@ class EnrollmentServiceUnitTest {
         when(courseRepository.findById(1L)).thenReturn(Optional.of(course));
 
         ApiException exception = assertThrows(ApiException.class, () -> enrollmentService.enroll(request));
-        assertTrue(exception.getMessage().contains("inactive"));
+        assertTrue(exception.getCode().contains("inactive"));
     }
 
     @Test

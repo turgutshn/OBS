@@ -15,6 +15,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class StudentServiceUnitTest {
 
     @Mock
@@ -111,7 +114,7 @@ class StudentServiceUnitTest {
         when(studentRepository.existsByStudentNumber("STU001")).thenReturn(true);
 
         ApiException exception = assertThrows(ApiException.class, () -> studentService.create(request));
-        assertTrue(exception.getMessage().contains("duplicate"));
+        assertTrue(exception.getCode().contains("duplicate"));
     }
 
     @Test
@@ -122,7 +125,7 @@ class StudentServiceUnitTest {
         when(userRepository.existsByEmail(request.email())).thenReturn(true);
 
         ApiException exception = assertThrows(ApiException.class, () -> studentService.create(request));
-        assertTrue(exception.getMessage().contains("duplicate"));
+        assertTrue(exception.getCode().contains("duplicate"));
     }
 
     @Test

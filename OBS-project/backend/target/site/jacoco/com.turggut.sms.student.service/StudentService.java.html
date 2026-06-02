@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StudentService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.student.service</a> &gt; <span class="el_source">StudentService.java</span></div><h1>StudentService.java</h1><pre class="source lang-java linenums">package com.turggut.sms.student.service;
+
+import com.turggut.sms.reporting.service.AuditLogService;
+
+import com.turggut.sms.student.domain.Student;
+import com.turggut.sms.student.domain.StudentRepository;
+import com.turggut.sms.iam.domain.Role;
+import com.turggut.sms.iam.domain.User;
+import com.turggut.sms.iam.domain.UserRepository;
+import com.turggut.sms.shared.dto.PageResponse;
+import com.turggut.sms.student.dto.StudentRequest;
+import com.turggut.sms.student.dto.StudentResponse;
+import com.turggut.sms.shared.exception.ApiException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.security.SecureRandom;
+import java.util.Base64;
+import java.util.Locale;
+
+<span class="fc" id="L25">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class StudentService {
+
+<span class="fc" id="L30">    private static final SecureRandom RANDOM = new SecureRandom();</span>
+
+    private final StudentRepository studentRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
+
+    @Transactional
+    public StudentResponse create(StudentRequest request) {
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        if (studentRepository.existsByStudentNumber(request.studentNumber())) {</span>
+<span class="fc" id="L40">            throw ApiException.conflict(&quot;duplicate_student_number&quot;, &quot;Student number already exists&quot;);</span>
+        }
+<span class="pc bpc" id="L42" title="1 of 4 branches missed.">        if (request.nationalId() != null &amp;&amp; !request.nationalId().isBlank()</span>
+<span class="pc bpc" id="L43" title="1 of 2 branches missed.">                &amp;&amp; studentRepository.existsByNationalId(request.nationalId())) {</span>
+<span class="nc" id="L44">            throw ApiException.conflict(&quot;duplicate_national_id&quot;, &quot;National ID already exists&quot;);</span>
+        }
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        if (userRepository.existsByEmail(request.email())) {</span>
+<span class="fc" id="L47">            throw ApiException.conflict(&quot;duplicate_email&quot;, &quot;Email already in use&quot;);</span>
+        }
+
+<span class="fc" id="L50">        String username = request.studentNumber().toLowerCase(Locale.ROOT);</span>
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">        if (userRepository.existsByUsername(username)) {</span>
+<span class="nc" id="L52">            throw ApiException.conflict(&quot;duplicate_username&quot;, &quot;Username already in use&quot;);</span>
+        }
+
+<span class="pc bpc" id="L55" title="1 of 4 branches missed.">        String rawPassword = request.password() != null &amp;&amp; !request.password().isBlank()</span>
+<span class="fc" id="L56">                ? request.password() : generateInitialPassword();</span>
+
+<span class="fc" id="L58">        User user = User.builder()</span>
+<span class="fc" id="L59">                .username(username)</span>
+<span class="fc" id="L60">                .email(request.email())</span>
+<span class="fc" id="L61">                .passwordHash(passwordEncoder.encode(rawPassword))</span>
+<span class="fc" id="L62">                .role(Role.STUDENT)</span>
+<span class="fc" id="L63">                .enabled(true)</span>
+<span class="fc" id="L64">                .build();</span>
+<span class="fc" id="L65">        user = userRepository.save(user);</span>
+
+<span class="fc" id="L67">        Student student = Student.builder()</span>
+<span class="fc" id="L68">                .user(user)</span>
+<span class="fc" id="L69">                .studentNumber(request.studentNumber())</span>
+<span class="fc" id="L70">                .firstName(request.firstName())</span>
+<span class="fc" id="L71">                .lastName(request.lastName())</span>
+<span class="fc" id="L72">                .nationalId(emptyToNull(request.nationalId()))</span>
+<span class="fc" id="L73">                .phone(emptyToNull(request.phone()))</span>
+<span class="fc" id="L74">                .dateOfBirth(request.dateOfBirth())</span>
+<span class="fc" id="L75">                .department(emptyToNull(request.department()))</span>
+<span class="fc" id="L76">                .enrollmentYear(request.enrollmentYear())</span>
+<span class="fc" id="L77">                .address(emptyToNull(request.address()))</span>
+<span class="fc" id="L78">                .build();</span>
+<span class="fc" id="L79">        student = studentRepository.save(student);</span>
+
+<span class="fc" id="L81">        auditLogService.success(&quot;STUDENT_CREATE&quot;, &quot;Student&quot;, student.getId().toString(),</span>
+<span class="fc" id="L82">                &quot;studentNumber=&quot; + student.getStudentNumber());</span>
+<span class="fc" id="L83">        return StudentResponse.from(student);</span>
+    }
+
+    @Transactional
+    public StudentResponse update(Long id, StudentRequest request) {
+<span class="fc" id="L88">        Student student = studentRepository.findById(id)</span>
+<span class="fc" id="L89">                .orElseThrow(() -&gt; ApiException.notFound(&quot;Student not found&quot;));</span>
+
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">        if (!student.getStudentNumber().equals(request.studentNumber())</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">                &amp;&amp; studentRepository.existsByStudentNumber(request.studentNumber())) {</span>
+<span class="nc" id="L93">            throw ApiException.conflict(&quot;duplicate_student_number&quot;, &quot;Student number already exists&quot;);</span>
+        }
+
+<span class="fc" id="L96">        User user = student.getUser();</span>
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">        if (!user.getEmail().equalsIgnoreCase(request.email())</span>
+<span class="pc bpc" id="L98" title="1 of 2 branches missed.">                &amp;&amp; userRepository.existsByEmail(request.email())) {</span>
+<span class="nc" id="L99">            throw ApiException.conflict(&quot;duplicate_email&quot;, &quot;Email already in use&quot;);</span>
+        }
+<span class="fc" id="L101">        user.setEmail(request.email());</span>
+<span class="fc" id="L102">        userRepository.save(user);</span>
+
+<span class="fc" id="L104">        student.setStudentNumber(request.studentNumber());</span>
+<span class="fc" id="L105">        student.setFirstName(request.firstName());</span>
+<span class="fc" id="L106">        student.setLastName(request.lastName());</span>
+<span class="fc" id="L107">        student.setNationalId(emptyToNull(request.nationalId()));</span>
+<span class="fc" id="L108">        student.setPhone(emptyToNull(request.phone()));</span>
+<span class="fc" id="L109">        student.setDateOfBirth(request.dateOfBirth());</span>
+<span class="fc" id="L110">        student.setDepartment(emptyToNull(request.department()));</span>
+<span class="fc" id="L111">        student.setEnrollmentYear(request.enrollmentYear());</span>
+<span class="fc" id="L112">        student.setAddress(emptyToNull(request.address()));</span>
+
+<span class="fc" id="L114">        auditLogService.success(&quot;STUDENT_UPDATE&quot;, &quot;Student&quot;, student.getId().toString(), null);</span>
+<span class="fc" id="L115">        return StudentResponse.from(student);</span>
+    }
+
+    @Transactional
+    public void delete(Long id) {
+<span class="fc" id="L120">        Student student = studentRepository.findById(id)</span>
+<span class="fc" id="L121">                .orElseThrow(() -&gt; ApiException.notFound(&quot;Student not found&quot;));</span>
+<span class="fc" id="L122">        Long userId = student.getUser().getId();</span>
+<span class="fc" id="L123">        studentRepository.delete(student);</span>
+<span class="fc" id="L124">        userRepository.deleteById(userId);</span>
+<span class="fc" id="L125">        auditLogService.success(&quot;STUDENT_DELETE&quot;, &quot;Student&quot;, id.toString(),</span>
+<span class="fc" id="L126">                &quot;studentNumber=&quot; + student.getStudentNumber());</span>
+<span class="fc" id="L127">    }</span>
+
+    @Transactional(readOnly = true)
+    public StudentResponse get(Long id) {
+<span class="fc" id="L131">        Student student = studentRepository.findById(id)</span>
+<span class="fc" id="L132">                .orElseThrow(() -&gt; ApiException.notFound(&quot;Student not found&quot;));</span>
+<span class="fc" id="L133">        return StudentResponse.from(student);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public StudentResponse getByUserId(Long userId) {
+<span class="fc" id="L138">        Student student = studentRepository.findByUserId(userId)</span>
+<span class="fc" id="L139">                .orElseThrow(() -&gt; ApiException.notFound(&quot;Student profile not found&quot;));</span>
+<span class="fc" id="L140">        return StudentResponse.from(student);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse&lt;StudentResponse&gt; search(String q, Pageable pageable) {
+<span class="fc" id="L145">        return PageResponse.from(studentRepository.search(q, pageable), StudentResponse::from);</span>
+    }
+
+    @Transactional
+    public void setActive(Long id, boolean active) {
+<span class="fc" id="L150">        Student student = studentRepository.findById(id)</span>
+<span class="pc" id="L151">                .orElseThrow(() -&gt; ApiException.notFound(&quot;Student not found&quot;));</span>
+<span class="fc" id="L152">        student.getUser().setEnabled(active);</span>
+<span class="fc" id="L153">        userRepository.save(student.getUser());</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">        auditLogService.success(active ? &quot;STUDENT_ACTIVATE&quot; : &quot;STUDENT_DEACTIVATE&quot;,</span>
+<span class="fc" id="L155">                &quot;Student&quot;, id.toString(), null);</span>
+<span class="fc" id="L156">    }</span>
+
+    private String emptyToNull(String value) {
+<span class="pc bpc" id="L159" title="1 of 4 branches missed.">        return (value == null || value.isBlank()) ? null : value;</span>
+    }
+
+    private String generateInitialPassword() {
+<span class="fc" id="L163">        byte[] bytes = new byte[9];</span>
+<span class="fc" id="L164">        RANDOM.nextBytes(bytes);</span>
+<span class="fc" id="L165">        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes) + &quot;A1!&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

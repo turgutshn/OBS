@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FeeController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.fee.web</a> &gt; <span class="el_source">FeeController.java</span></div><h1>FeeController.java</h1><pre class="source lang-java linenums">package com.turggut.sms.fee.web;
+
+import com.turggut.sms.fee.domain.FeeStatus;
+import com.turggut.sms.student.domain.StudentRepository;
+import com.turggut.sms.fee.dto.FeeRequest;
+import com.turggut.sms.fee.dto.FeeResponse;
+import com.turggut.sms.fee.dto.PaymentRequest;
+import com.turggut.sms.shared.exception.ApiException;
+import com.turggut.sms.shared.security.AuthenticatedUser;
+import com.turggut.sms.shared.security.SecurityUtils;
+import com.turggut.sms.fee.service.FeeService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api&quot;)
+@RequiredArgsConstructor
+public class FeeController {
+
+    private final FeeService feeService;
+    private final StudentRepository studentRepository;
+
+    @GetMapping(&quot;/admin/fees&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public List&lt;FeeResponse&gt; list(@RequestParam(required = false) FeeStatus status) {
+<span class="fc bfc" id="L31" title="All 2 branches covered.">        return status == null ? feeService.listAll() : feeService.listByStatus(status);</span>
+    }
+
+    @PostMapping(&quot;/admin/fees&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public FeeResponse assess(@Valid @RequestBody FeeRequest request) {
+<span class="fc" id="L37">        return feeService.createOrUpdateAssessment(request);</span>
+    }
+
+    @PostMapping(&quot;/admin/fees/{id}/payments&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public FeeResponse pay(@PathVariable Long id, @Valid @RequestBody PaymentRequest request) {
+<span class="fc" id="L43">        return feeService.pay(id, request);</span>
+    }
+
+    @PostMapping(&quot;/admin/fees/{id}/waive&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public FeeResponse waive(@PathVariable Long id) {
+<span class="fc" id="L49">        return feeService.waive(id);</span>
+    }
+
+    @DeleteMapping(&quot;/admin/fees/{id}&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public ResponseEntity&lt;Void&gt; delete(@PathVariable Long id) {
+<span class="fc" id="L55">        feeService.delete(id);</span>
+<span class="fc" id="L56">        return ResponseEntity.noContent().build();</span>
+    }
+
+    @GetMapping(&quot;/admin/students/{studentId}/fees&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public List&lt;FeeResponse&gt; listByStudent(@PathVariable Long studentId) {
+<span class="fc" id="L62">        return feeService.listByStudent(studentId);</span>
+    }
+
+    @GetMapping(&quot;/student/fees&quot;)
+    @PreAuthorize(&quot;hasRole('STUDENT')&quot;)
+    public List&lt;FeeResponse&gt; myFees() {
+<span class="fc" id="L68">        AuthenticatedUser user = SecurityUtils.currentUser()</span>
+<span class="pc" id="L69">                .orElseThrow(() -&gt; ApiException.unauthorized(&quot;Not authenticated&quot;));</span>
+<span class="fc" id="L70">        Long studentId = studentRepository.findByUserId(user.getId())</span>
+<span class="pc" id="L71">                .orElseThrow(() -&gt; ApiException.notFound(&quot;Student profile not found&quot;)).getId();</span>
+<span class="fc" id="L72">        return feeService.listByStudent(studentId);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

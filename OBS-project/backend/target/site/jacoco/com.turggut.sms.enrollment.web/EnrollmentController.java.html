@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EnrollmentController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.enrollment.web</a> &gt; <span class="el_source">EnrollmentController.java</span></div><h1>EnrollmentController.java</h1><pre class="source lang-java linenums">package com.turggut.sms.enrollment.web;
+
+import com.turggut.sms.student.domain.StudentRepository;
+import com.turggut.sms.enrollment.dto.EnrollmentRequest;
+import com.turggut.sms.enrollment.dto.EnrollmentResponse;
+import com.turggut.sms.enrollment.dto.GradeRequest;
+import com.turggut.sms.shared.exception.ApiException;
+import com.turggut.sms.shared.security.AuthenticatedUser;
+import com.turggut.sms.shared.security.SecurityUtils;
+import com.turggut.sms.enrollment.service.EnrollmentService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping(&quot;/api&quot;)
+@RequiredArgsConstructor
+public class EnrollmentController {
+
+    private final EnrollmentService enrollmentService;
+    private final StudentRepository studentRepository;
+
+    @PostMapping(&quot;/admin/enrollments&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public EnrollmentResponse enroll(@Valid @RequestBody EnrollmentRequest request) {
+<span class="fc" id="L30">        return enrollmentService.enroll(request);</span>
+    }
+
+    @DeleteMapping(&quot;/admin/enrollments/{id}&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public ResponseEntity&lt;Void&gt; delete(@PathVariable Long id) {
+<span class="fc" id="L36">        enrollmentService.delete(id);</span>
+<span class="fc" id="L37">        return ResponseEntity.noContent().build();</span>
+    }
+
+    @PostMapping(&quot;/admin/enrollments/{id}/drop&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public ResponseEntity&lt;Void&gt; drop(@PathVariable Long id) {
+<span class="fc" id="L43">        enrollmentService.drop(id);</span>
+<span class="fc" id="L44">        return ResponseEntity.noContent().build();</span>
+    }
+
+    @PutMapping(&quot;/teacher/enrollments/{id}/grade&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN','TEACHER')&quot;)
+    public EnrollmentResponse setGrade(@PathVariable Long id, @Valid @RequestBody GradeRequest request) {
+<span class="fc" id="L50">        return enrollmentService.setGrade(id, request);</span>
+    }
+
+    @GetMapping(&quot;/admin/students/{studentId}/enrollments&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public List&lt;EnrollmentResponse&gt; listByStudent(@PathVariable Long studentId) {
+<span class="fc" id="L56">        return enrollmentService.listByStudent(studentId);</span>
+    }
+
+    @GetMapping(&quot;/admin/courses/{courseId}/enrollments&quot;)
+    @PreAuthorize(&quot;hasAnyRole('ADMIN','TEACHER')&quot;)
+    public List&lt;EnrollmentResponse&gt; listByCourse(@PathVariable Long courseId) {
+<span class="fc" id="L62">        return enrollmentService.listByCourse(courseId);</span>
+    }
+
+    @GetMapping(&quot;/student/enrollments&quot;)
+    @PreAuthorize(&quot;hasRole('STUDENT')&quot;)
+    public List&lt;EnrollmentResponse&gt; myEnrollments() {
+<span class="fc" id="L68">        AuthenticatedUser user = SecurityUtils.currentUser()</span>
+<span class="pc" id="L69">                .orElseThrow(() -&gt; ApiException.unauthorized(&quot;Not authenticated&quot;));</span>
+<span class="fc" id="L70">        Long studentId = studentRepository.findByUserId(user.getId())</span>
+<span class="pc" id="L71">                .orElseThrow(() -&gt; ApiException.notFound(&quot;Student profile not found&quot;)).getId();</span>
+<span class="fc" id="L72">        return enrollmentService.listByStudent(studentId);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

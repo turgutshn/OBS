@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.iam.service</a> &gt; <span class="el_source">AuthService.java</span></div><h1>AuthService.java</h1><pre class="source lang-java linenums">package com.turggut.sms.iam.service;
+
+import com.turggut.sms.reporting.service.AuditLogService;
+
+import com.turggut.sms.shared.config.AppProperties;
+import com.turggut.sms.student.domain.StudentRepository;
+import com.turggut.sms.teacher.domain.TeacherRepository;
+import com.turggut.sms.iam.domain.RefreshToken;
+import com.turggut.sms.iam.domain.RefreshTokenRepository;
+import com.turggut.sms.iam.domain.User;
+import com.turggut.sms.iam.domain.UserRepository;
+import com.turggut.sms.iam.dto.AuthResponse;
+import com.turggut.sms.iam.dto.LoginRequest;
+import com.turggut.sms.iam.dto.PasswordChangeRequest;
+import com.turggut.sms.shared.exception.ApiException;
+import com.turggut.sms.shared.security.JwtTokenProvider;
+import com.turggut.sms.shared.security.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Base64;
+import java.util.HexFormat;
+
+<span class="fc" id="L32">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+<span class="fc" id="L37">    private static final SecureRandom RANDOM = new SecureRandom();</span>
+
+    private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final StudentRepository studentRepository;
+    private final TeacherRepository teacherRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider tokenProvider;
+    private final AuditLogService auditLogService;
+    private final AuthSecurityService authSecurityService;
+    private final AppProperties appProperties;
+
+    @Transactional
+    public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
+<span class="fc" id="L51">        User user = userRepository.findByUsername(request.username()).orElse(null);</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if (user == null) {</span>
+<span class="fc" id="L53">            auditLogService.failure(&quot;LOGIN&quot;, &quot;User&quot;, request.username(), &quot;user not found&quot;);</span>
+<span class="fc" id="L54">            throw ApiException.unauthorized(&quot;Invalid credentials&quot;);</span>
+        }
+
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        if (user.isLocked()) {</span>
+<span class="fc" id="L58">            auditLogService.failure(&quot;LOGIN&quot;, &quot;User&quot;, user.getUsername(), &quot;account locked&quot;);</span>
+<span class="fc" id="L59">            throw ApiException.unauthorized(&quot;Account locked. Try again later.&quot;);</span>
+        }
+
+<span class="fc bfc" id="L62" title="All 2 branches covered.">        if (!user.isEnabled()) {</span>
+<span class="fc" id="L63">            auditLogService.failure(&quot;LOGIN&quot;, &quot;User&quot;, user.getUsername(), &quot;account disabled&quot;);</span>
+<span class="fc" id="L64">            throw ApiException.unauthorized(&quot;Account disabled&quot;);</span>
+        }
+
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {</span>
+<span class="fc" id="L68">            authSecurityService.registerFailedAttempt(user.getId());</span>
+<span class="fc" id="L69">            auditLogService.failure(&quot;LOGIN&quot;, &quot;User&quot;, user.getUsername(), &quot;wrong password&quot;);</span>
+<span class="fc" id="L70">            throw ApiException.unauthorized(&quot;Invalid credentials&quot;);</span>
+        }
+
+<span class="fc" id="L73">        user.setFailedAttempts(0);</span>
+<span class="fc" id="L74">        user.setLockedUntil(null);</span>
+<span class="fc" id="L75">        user.setLastLoginAt(Instant.now());</span>
+<span class="fc" id="L76">        userRepository.save(user);</span>
+
+<span class="fc" id="L78">        String access = tokenProvider.generateAccessToken(user);</span>
+<span class="fc" id="L79">        String refresh = createRefreshToken(user, httpRequest);</span>
+
+<span class="fc" id="L81">        auditLogService.success(&quot;LOGIN&quot;, &quot;User&quot;, user.getUsername(), &quot;successful login&quot;);</span>
+<span class="fc" id="L82">        log.info(&quot;User '{}' logged in&quot;, user.getUsername());</span>
+<span class="fc" id="L83">        return buildResponse(user, access, refresh);</span>
+    }
+
+    @Transactional
+    public AuthResponse refresh(String refreshToken, HttpServletRequest httpRequest) {
+<span class="fc" id="L88">        String hash = hash(refreshToken);</span>
+<span class="fc" id="L89">        RefreshToken stored = refreshTokenRepository.findByTokenHash(hash)</span>
+<span class="fc" id="L90">                .orElseThrow(() -&gt; ApiException.unauthorized(&quot;Invalid refresh token&quot;));</span>
+
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        if (!stored.isActive()) {</span>
+<span class="fc" id="L93">            authSecurityService.revokeAllForUser(stored.getUser().getId());</span>
+<span class="fc" id="L94">            auditLogService.failure(&quot;REFRESH&quot;, &quot;User&quot;, stored.getUser().getUsername(), &quot;reused or expired token&quot;);</span>
+<span class="fc" id="L95">            throw ApiException.unauthorized(&quot;Refresh token no longer valid&quot;);</span>
+        }
+
+<span class="fc" id="L98">        stored.setRevoked(true);</span>
+<span class="fc" id="L99">        refreshTokenRepository.save(stored);</span>
+
+<span class="fc" id="L101">        User user = stored.getUser();</span>
+<span class="fc" id="L102">        String access = tokenProvider.generateAccessToken(user);</span>
+<span class="fc" id="L103">        String newRefresh = createRefreshToken(user, httpRequest);</span>
+<span class="fc" id="L104">        auditLogService.success(&quot;REFRESH&quot;, &quot;User&quot;, user.getUsername(), null);</span>
+<span class="fc" id="L105">        return buildResponse(user, access, newRefresh);</span>
+    }
+
+    @Transactional
+    public void logout(String refreshToken) {
+<span class="pc bpc" id="L110" title="2 of 4 branches missed.">        if (refreshToken == null || refreshToken.isBlank()) return;</span>
+<span class="fc" id="L111">        refreshTokenRepository.findByTokenHash(hash(refreshToken)).ifPresent(rt -&gt; {</span>
+<span class="fc" id="L112">            rt.setRevoked(true);</span>
+<span class="fc" id="L113">            refreshTokenRepository.save(rt);</span>
+<span class="fc" id="L114">            auditLogService.success(&quot;LOGOUT&quot;, &quot;User&quot;, rt.getUser().getUsername(), null);</span>
+<span class="fc" id="L115">        });</span>
+<span class="fc" id="L116">    }</span>
+
+    @Transactional
+    public void logoutAll() {
+<span class="fc" id="L120">        Long userId = SecurityUtils.currentUserId();</span>
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">        if (userId == null) return;</span>
+<span class="fc" id="L122">        int revoked = refreshTokenRepository.revokeAllForUser(userId);</span>
+<span class="fc" id="L123">        auditLogService.success(&quot;LOGOUT_ALL&quot;, &quot;User&quot;, String.valueOf(userId), &quot;revoked=&quot; + revoked);</span>
+<span class="fc" id="L124">    }</span>
+
+    @Transactional
+    public void changePassword(PasswordChangeRequest request) {
+<span class="fc" id="L128">        Long userId = SecurityUtils.currentUserId();</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (userId == null) throw ApiException.unauthorized(&quot;Not authenticated&quot;);</span>
+<span class="fc" id="L130">        User user = userRepository.findById(userId)</span>
+<span class="pc" id="L131">                .orElseThrow(() -&gt; ApiException.unauthorized(&quot;User not found&quot;));</span>
+<span class="fc bfc" id="L132" title="All 2 branches covered.">        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {</span>
+<span class="fc" id="L133">            auditLogService.failure(&quot;PASSWORD_CHANGE&quot;, &quot;User&quot;, user.getUsername(), &quot;wrong current password&quot;);</span>
+<span class="fc" id="L134">            throw ApiException.badRequest(&quot;invalid_password&quot;, &quot;Current password is incorrect&quot;);</span>
+        }
+<span class="fc" id="L136">        validatePasswordStrength(request.newPassword());</span>
+<span class="fc" id="L137">        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));</span>
+<span class="fc" id="L138">        userRepository.save(user);</span>
+<span class="fc" id="L139">        refreshTokenRepository.revokeAllForUser(user.getId());</span>
+<span class="fc" id="L140">        auditLogService.success(&quot;PASSWORD_CHANGE&quot;, &quot;User&quot;, user.getUsername(), null);</span>
+<span class="fc" id="L141">    }</span>
+
+    public AuthResponse currentUserInfo() {
+<span class="fc" id="L144">        Long userId = SecurityUtils.currentUserId();</span>
+<span class="pc bpc" id="L145" title="1 of 2 branches missed.">        if (userId == null) throw ApiException.unauthorized(&quot;Not authenticated&quot;);</span>
+<span class="fc" id="L146">        User user = userRepository.findById(userId)</span>
+<span class="pc" id="L147">                .orElseThrow(() -&gt; ApiException.unauthorized(&quot;User not found&quot;));</span>
+<span class="fc" id="L148">        return new AuthResponse(null, null, 0, buildUserInfo(user));</span>
+    }
+
+    private void validatePasswordStrength(String pw) {
+<span class="fc" id="L152">        int min = appProperties.security().password().minLength();</span>
+<span class="pc bpc" id="L153" title="1 of 2 branches missed.">        if (pw.length() &lt; min) {</span>
+<span class="nc" id="L154">            throw ApiException.badRequest(&quot;weak_password&quot;, &quot;Password must be at least &quot; + min + &quot; characters&quot;);</span>
+        }
+<span class="fc" id="L156">        boolean hasDigit = pw.chars().anyMatch(Character::isDigit);</span>
+<span class="fc" id="L157">        boolean hasLetter = pw.chars().anyMatch(Character::isLetter);</span>
+<span class="pc bpc" id="L158" title="1 of 4 branches missed.">        if (!hasDigit || !hasLetter) {</span>
+<span class="fc" id="L159">            throw ApiException.badRequest(&quot;weak_password&quot;, &quot;Password must contain letters and digits&quot;);</span>
+        }
+<span class="fc" id="L161">    }</span>
+
+    private String createRefreshToken(User user, HttpServletRequest httpRequest) {
+<span class="fc" id="L164">        byte[] raw = new byte[48];</span>
+<span class="fc" id="L165">        RANDOM.nextBytes(raw);</span>
+<span class="fc" id="L166">        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(raw);</span>
+<span class="fc" id="L167">        Instant expires = Instant.now().plus(appProperties.security().jwt().refreshTokenTtlDays(), ChronoUnit.DAYS);</span>
+<span class="fc" id="L168">        RefreshToken entity = RefreshToken.builder()</span>
+<span class="fc" id="L169">                .user(user)</span>
+<span class="fc" id="L170">                .tokenHash(hash(token))</span>
+<span class="fc" id="L171">                .expiresAt(expires)</span>
+<span class="pc bpc" id="L172" title="1 of 2 branches missed.">                .ipAddress(httpRequest != null ? clientIp(httpRequest) : null)</span>
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">                .userAgent(httpRequest != null ? truncate(httpRequest.getHeader(&quot;User-Agent&quot;), 255) : null)</span>
+<span class="fc" id="L174">                .build();</span>
+<span class="fc" id="L175">        refreshTokenRepository.save(entity);</span>
+<span class="fc" id="L176">        return token;</span>
+    }
+
+    private AuthResponse buildResponse(User user, String access, String refresh) {
+<span class="fc" id="L180">        long ttl = appProperties.security().jwt().accessTokenTtlMinutes() * 60L;</span>
+<span class="fc" id="L181">        return new AuthResponse(access, refresh, ttl, buildUserInfo(user));</span>
+    }
+
+    private AuthResponse.UserInfo buildUserInfo(User user) {
+<span class="fc bfc" id="L185" title="All 3 branches covered.">        String fullName = switch (user.getRole()) {</span>
+<span class="fc" id="L186">            case STUDENT -&gt; studentRepository.findByUserId(user.getId())</span>
+<span class="fc" id="L187">                    .map(s -&gt; s.getFirstName() + &quot; &quot; + s.getLastName()).orElse(user.getUsername());</span>
+<span class="fc" id="L188">            case TEACHER -&gt; teacherRepository.findByUserId(user.getId())</span>
+<span class="fc" id="L189">                    .map(t -&gt; t.getFirstName() + &quot; &quot; + t.getLastName()).orElse(user.getUsername());</span>
+<span class="fc" id="L190">            case ADMIN -&gt; &quot;Administrator&quot;;</span>
+        };
+<span class="fc" id="L192">        return new AuthResponse.UserInfo(user.getId(), user.getUsername(), user.getEmail(),</span>
+<span class="fc" id="L193">                user.getRole().name(), fullName);</span>
+    }
+
+    private String hash(String token) {
+        try {
+<span class="fc" id="L198">            MessageDigest md = MessageDigest.getInstance(&quot;SHA-256&quot;);</span>
+<span class="fc" id="L199">            return HexFormat.of().formatHex(md.digest(token.getBytes()));</span>
+<span class="nc" id="L200">        } catch (Exception e) {</span>
+<span class="nc" id="L201">            throw new IllegalStateException(e);</span>
+        }
+    }
+
+    private String clientIp(HttpServletRequest request) {
+<span class="fc" id="L206">        String forwarded = request.getHeader(&quot;X-Forwarded-For&quot;);</span>
+<span class="pc bpc" id="L207" title="3 of 4 branches missed.">        if (forwarded != null &amp;&amp; !forwarded.isBlank()) {</span>
+<span class="nc" id="L208">            return forwarded.split(&quot;,&quot;)[0].trim();</span>
+        }
+<span class="fc" id="L210">        return request.getRemoteAddr();</span>
+    }
+
+    private String truncate(String value, int max) {
+<span class="pc bpc" id="L214" title="1 of 2 branches missed.">        if (value == null) return null;</span>
+<span class="nc bnc" id="L215" title="All 2 branches missed.">        return value.length() &gt; max ? value.substring(0, max) : value;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

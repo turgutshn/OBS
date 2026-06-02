@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReportController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.reporting.web</a> &gt; <span class="el_source">ReportController.java</span></div><h1>ReportController.java</h1><pre class="source lang-java linenums">package com.turggut.sms.reporting.web;
+
+import com.turggut.sms.reporting.domain.AuditLog;
+import com.turggut.sms.reporting.domain.AuditLogRepository;
+import com.turggut.sms.student.domain.StudentRepository;
+import com.turggut.sms.shared.dto.PageResponse;
+import com.turggut.sms.reporting.dto.SummaryReport;
+import com.turggut.sms.reporting.dto.TranscriptResponse;
+import com.turggut.sms.shared.exception.ApiException;
+import com.turggut.sms.shared.security.AuthenticatedUser;
+import com.turggut.sms.shared.security.SecurityUtils;
+import com.turggut.sms.reporting.service.ReportService;
+import com.turggut.sms.reporting.service.TranscriptService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping(&quot;/api&quot;)
+@RequiredArgsConstructor
+public class ReportController {
+
+    private final ReportService reportService;
+    private final TranscriptService transcriptService;
+    private final StudentRepository studentRepository;
+    private final AuditLogRepository auditLogRepository;
+
+    @GetMapping(&quot;/admin/reports/summary&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public SummaryReport summary() {
+<span class="fc" id="L33">        return reportService.summary();</span>
+    }
+
+    @GetMapping(&quot;/admin/reports/transcript/{studentId}&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public TranscriptResponse transcript(@PathVariable Long studentId) {
+<span class="fc" id="L39">        return transcriptService.generate(studentId);</span>
+    }
+
+    @GetMapping(&quot;/student/transcript&quot;)
+    @PreAuthorize(&quot;hasRole('STUDENT')&quot;)
+    public TranscriptResponse myTranscript() {
+<span class="fc" id="L45">        AuthenticatedUser user = SecurityUtils.currentUser()</span>
+<span class="pc" id="L46">                .orElseThrow(() -&gt; ApiException.unauthorized(&quot;Not authenticated&quot;));</span>
+<span class="fc" id="L47">        Long studentId = studentRepository.findByUserId(user.getId())</span>
+<span class="pc" id="L48">                .orElseThrow(() -&gt; ApiException.notFound(&quot;Student profile not found&quot;)).getId();</span>
+<span class="fc" id="L49">        return transcriptService.generate(studentId);</span>
+    }
+
+    @GetMapping(&quot;/admin/audit-logs&quot;)
+    @PreAuthorize(&quot;hasRole('ADMIN')&quot;)
+    public PageResponse&lt;AuditLog&gt; auditLogs(@RequestParam(required = false) String actor,
+                                            @RequestParam(required = false) String action,
+                                            @PageableDefault(size = 50) Pageable pageable) {
+<span class="fc" id="L57">        return PageResponse.from(auditLogRepository.search(actor, action, pageable), a -&gt; a);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

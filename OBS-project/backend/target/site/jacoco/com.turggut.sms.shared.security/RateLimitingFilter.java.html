@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RateLimitingFilter.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.shared.security</a> &gt; <span class="el_source">RateLimitingFilter.java</span></div><h1>RateLimitingFilter.java</h1><pre class="source lang-java linenums">package com.turggut.sms.shared.security;
+
+import com.turggut.sms.shared.config.AppProperties;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Simple sliding-window per-IP rate limiter for the in-process API.
+ * Tracks timestamps within a 1-minute window. Adequate for a single-instance
+ * deployment; for multi-instance setups replace with a Redis-backed limiter.
+ */
+@Component
+public class RateLimitingFilter extends OncePerRequestFilter {
+
+    private static final long WINDOW_MS = 60_000L;
+
+<span class="fc" id="L28">    private final Map&lt;String, Deque&lt;Long&gt;&gt; authWindows = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L29">    private final Map&lt;String, Deque&lt;Long&gt;&gt; apiWindows = new ConcurrentHashMap&lt;&gt;();</span>
+    private final int authLimit;
+    private final int apiLimit;
+
+<span class="fc" id="L33">    public RateLimitingFilter(AppProperties props) {</span>
+<span class="fc" id="L34">        this.authLimit = props.security().rateLimit().authRequestsPerMinute();</span>
+<span class="fc" id="L35">        this.apiLimit = props.security().rateLimit().apiRequestsPerMinute();</span>
+<span class="fc" id="L36">    }</span>
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain chain) throws ServletException, IOException {
+<span class="fc" id="L42">        String path = request.getRequestURI();</span>
+<span class="fc" id="L43">        String clientKey = resolveClientKey(request);</span>
+
+        boolean allowed;
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        if (path.startsWith(&quot;/api/auth/&quot;)) {</span>
+<span class="fc" id="L47">            allowed = tryAcquire(authWindows, clientKey, authLimit);</span>
+<span class="fc bfc" id="L48" title="All 2 branches covered.">        } else if (path.startsWith(&quot;/api/&quot;)) {</span>
+<span class="fc" id="L49">            allowed = tryAcquire(apiWindows, clientKey, apiLimit);</span>
+        } else {
+<span class="fc" id="L51">            chain.doFilter(request, response);</span>
+<span class="fc" id="L52">            return;</span>
+        }
+
+<span class="fc bfc" id="L55" title="All 2 branches covered.">        if (allowed) {</span>
+<span class="fc" id="L56">            chain.doFilter(request, response);</span>
+        } else {
+<span class="fc" id="L58">            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());</span>
+<span class="fc" id="L59">            response.setContentType(&quot;application/json&quot;);</span>
+<span class="fc" id="L60">            response.getWriter().write(&quot;{\&quot;error\&quot;:\&quot;rate_limit_exceeded\&quot;,\&quot;message\&quot;:\&quot;Too many requests\&quot;}&quot;);</span>
+        }
+<span class="fc" id="L62">    }</span>
+
+    private boolean tryAcquire(Map&lt;String, Deque&lt;Long&gt;&gt; windows, String key, int limit) {
+<span class="fc" id="L65">        long now = System.currentTimeMillis();</span>
+<span class="fc" id="L66">        Deque&lt;Long&gt; window = windows.computeIfAbsent(key, k -&gt; new ArrayDeque&lt;&gt;());</span>
+<span class="fc" id="L67">        synchronized (window) {</span>
+<span class="pc bpc" id="L68" title="1 of 4 branches missed.">            while (!window.isEmpty() &amp;&amp; now - window.peekFirst() &gt; WINDOW_MS) {</span>
+<span class="nc" id="L69">                window.pollFirst();</span>
+            }
+<span class="fc bfc" id="L71" title="All 2 branches covered.">            if (window.size() &gt;= limit) {</span>
+<span class="fc" id="L72">                return false;</span>
+            }
+<span class="fc" id="L74">            window.addLast(now);</span>
+<span class="fc" id="L75">            return true;</span>
+        }
+    }
+
+    private String resolveClientKey(HttpServletRequest request) {
+<span class="fc" id="L80">        String forwarded = request.getHeader(&quot;X-Forwarded-For&quot;);</span>
+<span class="pc bpc" id="L81" title="1 of 4 branches missed.">        if (forwarded != null &amp;&amp; !forwarded.isBlank()) {</span>
+<span class="fc" id="L82">            return forwarded.split(&quot;,&quot;)[0].trim();</span>
+        }
+<span class="fc" id="L84">        return request.getRemoteAddr();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

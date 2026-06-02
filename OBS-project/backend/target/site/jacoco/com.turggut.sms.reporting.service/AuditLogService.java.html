@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuditLogService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.reporting.service</a> &gt; <span class="el_source">AuditLogService.java</span></div><h1>AuditLogService.java</h1><pre class="source lang-java linenums">package com.turggut.sms.reporting.service;
+
+import com.turggut.sms.reporting.domain.AuditLog;
+import com.turggut.sms.reporting.domain.AuditLogRepository;
+import com.turggut.sms.shared.security.AuthenticatedUser;
+import com.turggut.sms.shared.security.RequestIdFilter;
+import com.turggut.sms.shared.security.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import java.time.Instant;
+
+<span class="fc" id="L21">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class AuditLogService {
+
+    private final AuditLogRepository repository;
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = false)
+    public void record(String action, String entityType, String entityId, String status, String details) {
+        try {
+<span class="fc" id="L31">            AuthenticatedUser user = SecurityUtils.currentUser().orElse(null);</span>
+<span class="fc" id="L32">            HttpServletRequest req = currentRequest();</span>
+<span class="fc" id="L33">            AuditLog entry = AuditLog.builder()</span>
+<span class="fc" id="L34">                    .occurredAt(Instant.now())</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">                    .actorUsername(user != null ? user.getUsername() : &quot;anonymous&quot;)</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">                    .actorRole(user != null ? user.getRole().name() : null)</span>
+<span class="fc" id="L37">                    .action(action)</span>
+<span class="fc" id="L38">                    .entityType(entityType)</span>
+<span class="fc" id="L39">                    .entityId(entityId)</span>
+<span class="pc bpc" id="L40" title="1 of 2 branches missed.">                    .ipAddress(req != null ? clientIp(req) : null)</span>
+<span class="pc bpc" id="L41" title="1 of 2 branches missed.">                    .userAgent(req != null ? truncate(req.getHeader(&quot;User-Agent&quot;), 255) : null)</span>
+<span class="fc" id="L42">                    .requestId(MDC.get(RequestIdFilter.MDC_KEY))</span>
+<span class="fc" id="L43">                    .status(status)</span>
+<span class="fc" id="L44">                    .details(truncate(details, 4000))</span>
+<span class="fc" id="L45">                    .build();</span>
+<span class="fc" id="L46">            repository.save(entry);</span>
+<span class="fc" id="L47">            log.info(&quot;AUDIT action={} entity={}:{} actor={} status={}&quot;,</span>
+<span class="fc" id="L48">                    action, entityType, entityId, entry.getActorUsername(), status);</span>
+<span class="nc" id="L49">        } catch (Exception ex) {</span>
+<span class="nc" id="L50">            log.warn(&quot;Failed to persist audit log for action={}: {}&quot;, action, ex.getMessage());</span>
+<span class="fc" id="L51">        }</span>
+<span class="fc" id="L52">    }</span>
+
+    public void success(String action, String entityType, String entityId, String details) {
+<span class="fc" id="L55">        record(action, entityType, entityId, &quot;SUCCESS&quot;, details);</span>
+<span class="fc" id="L56">    }</span>
+
+    public void failure(String action, String entityType, String entityId, String details) {
+<span class="fc" id="L59">        record(action, entityType, entityId, &quot;FAILURE&quot;, details);</span>
+<span class="fc" id="L60">    }</span>
+
+    private HttpServletRequest currentRequest() {
+<span class="fc" id="L63">        var attrs = RequestContextHolder.getRequestAttributes();</span>
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">        if (attrs instanceof ServletRequestAttributes sra) {</span>
+<span class="fc" id="L65">            return sra.getRequest();</span>
+        }
+<span class="nc" id="L67">        return null;</span>
+    }
+
+    private String clientIp(HttpServletRequest request) {
+<span class="fc" id="L71">        String forwarded = request.getHeader(&quot;X-Forwarded-For&quot;);</span>
+<span class="pc bpc" id="L72" title="3 of 4 branches missed.">        if (forwarded != null &amp;&amp; !forwarded.isBlank()) {</span>
+<span class="nc" id="L73">            return forwarded.split(&quot;,&quot;)[0].trim();</span>
+        }
+<span class="fc" id="L75">        return request.getRemoteAddr();</span>
+    }
+
+    private String truncate(String value, int max) {
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (value == null) return null;</span>
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        return value.length() &gt; max ? value.substring(0, max) : value;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Fee.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.fee.domain</a> &gt; <span class="el_source">Fee.java</span></div><h1>Fee.java</h1><pre class="source lang-java linenums">package com.turggut.sms.fee.domain;
+
+import com.turggut.sms.shared.domain.BaseAuditedEntity;
+import com.turggut.sms.student.domain.Student;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = &quot;fees&quot;,
+        uniqueConstraints = @UniqueConstraint(columnNames = {&quot;student_id&quot;, &quot;semester&quot;}))
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Fee extends BaseAuditedEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = &quot;student_id&quot;, nullable = false)
+    private Student student;
+
+    @Column(nullable = false, length = 20)
+    private String semester;
+
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal amount;
+
+    @Column(name = &quot;paid_amount&quot;, nullable = false, precision = 12, scale = 2)
+    private BigDecimal paidAmount = BigDecimal.ZERO;
+
+    @Column(name = &quot;due_date&quot;, nullable = false)
+    private LocalDate dueDate;
+
+    @Column(name = &quot;paid_at&quot;)
+    private Instant paidAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private FeeStatus status = FeeStatus.PENDING;
+
+    @Column(length = 255)
+    private String description;
+
+    public BigDecimal getOutstanding() {
+<span class="fc" id="L53">        return amount.subtract(paidAmount);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

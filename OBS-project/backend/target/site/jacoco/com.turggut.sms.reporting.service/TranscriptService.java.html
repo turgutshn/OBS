@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TranscriptService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.reporting.service</a> &gt; <span class="el_source">TranscriptService.java</span></div><h1>TranscriptService.java</h1><pre class="source lang-java linenums">package com.turggut.sms.reporting.service;
+
+import com.turggut.sms.enrollment.service.GradeCalculator;
+
+import com.turggut.sms.enrollment.domain.Enrollment;
+import com.turggut.sms.enrollment.domain.EnrollmentRepository;
+import com.turggut.sms.student.domain.Student;
+import com.turggut.sms.student.domain.StudentRepository;
+import com.turggut.sms.enrollment.dto.EnrollmentResponse;
+import com.turggut.sms.reporting.dto.TranscriptResponse;
+import com.turggut.sms.shared.exception.ApiException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.*;
+
+@Service
+@RequiredArgsConstructor
+public class TranscriptService {
+
+    private final StudentRepository studentRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final AuditLogService auditLogService;
+
+    @Transactional
+    public TranscriptResponse generate(Long studentId) {
+<span class="fc" id="L30">        Student student = studentRepository.findById(studentId)</span>
+<span class="fc" id="L31">                .orElseThrow(() -&gt; ApiException.notFound(&quot;Student not found&quot;));</span>
+
+<span class="fc" id="L33">        List&lt;Enrollment&gt; enrollments = enrollmentRepository.findTranscriptByStudent(studentId);</span>
+
+        // Group by semester (preserve order: semester DESC)
+<span class="fc" id="L36">        Map&lt;String, List&lt;Enrollment&gt;&gt; bySemester = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">        for (Enrollment e : enrollments) {</span>
+<span class="fc" id="L38">            bySemester.computeIfAbsent(e.getSemester(), k -&gt; new ArrayList&lt;&gt;()).add(e);</span>
+<span class="fc" id="L39">        }</span>
+
+<span class="fc" id="L41">        List&lt;TranscriptResponse.SemesterBlock&gt; blocks = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L42">        BigDecimal totalWeightedPoints = BigDecimal.ZERO;</span>
+<span class="fc" id="L43">        int totalGradedCredits = 0;</span>
+<span class="fc" id="L44">        int totalCredits = 0;</span>
+<span class="fc" id="L45">        int completedCredits = 0;</span>
+
+<span class="fc bfc" id="L47" title="All 2 branches covered.">        for (Map.Entry&lt;String, List&lt;Enrollment&gt;&gt; entry : bySemester.entrySet()) {</span>
+<span class="fc" id="L48">            BigDecimal semWeighted = BigDecimal.ZERO;</span>
+<span class="fc" id="L49">            int semGradedCredits = 0;</span>
+<span class="fc" id="L50">            int semCredits = 0;</span>
+<span class="fc" id="L51">            List&lt;EnrollmentResponse&gt; rows = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">            for (Enrollment e : entry.getValue()) {</span>
+<span class="fc" id="L53">                rows.add(EnrollmentResponse.from(e));</span>
+<span class="fc" id="L54">                int credits = e.getCourse().getCredits();</span>
+<span class="fc" id="L55">                semCredits += credits;</span>
+<span class="fc" id="L56">                totalCredits += credits;</span>
+<span class="fc" id="L57">                BigDecimal gp = GradeCalculator.gradePoint(e.getLetterGrade());</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">                if (gp != null) {</span>
+<span class="fc" id="L59">                    BigDecimal weighted = gp.multiply(BigDecimal.valueOf(credits));</span>
+<span class="fc" id="L60">                    semWeighted = semWeighted.add(weighted);</span>
+<span class="fc" id="L61">                    totalWeightedPoints = totalWeightedPoints.add(weighted);</span>
+<span class="fc" id="L62">                    semGradedCredits += credits;</span>
+<span class="fc" id="L63">                    totalGradedCredits += credits;</span>
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">                    if (GradeCalculator.isPassing(e.getLetterGrade())) {</span>
+<span class="fc" id="L65">                        completedCredits += credits;</span>
+                    }
+                }
+<span class="fc" id="L68">            }</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">            BigDecimal semGpa = semGradedCredits == 0 ? null :</span>
+<span class="fc" id="L70">                    semWeighted.divide(BigDecimal.valueOf(semGradedCredits), 2, RoundingMode.HALF_UP);</span>
+<span class="fc" id="L71">            blocks.add(new TranscriptResponse.SemesterBlock(entry.getKey(), rows, semGpa, semCredits));</span>
+<span class="fc" id="L72">        }</span>
+
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        BigDecimal gpa = totalGradedCredits == 0 ? null :</span>
+<span class="fc" id="L75">                totalWeightedPoints.divide(BigDecimal.valueOf(totalGradedCredits), 2, RoundingMode.HALF_UP);</span>
+
+<span class="fc" id="L77">        auditLogService.success(&quot;TRANSCRIPT_GENERATE&quot;, &quot;Student&quot;, studentId.toString(), null);</span>
+
+<span class="fc" id="L79">        return new TranscriptResponse(</span>
+<span class="fc" id="L80">                student.getId(),</span>
+<span class="fc" id="L81">                student.getStudentNumber(),</span>
+<span class="fc" id="L82">                student.getFullName(),</span>
+<span class="fc" id="L83">                student.getDepartment(),</span>
+<span class="fc" id="L84">                student.getEnrollmentYear(),</span>
+                blocks,
+                gpa,
+<span class="fc" id="L87">                totalCredits,</span>
+<span class="fc" id="L88">                completedCredits);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

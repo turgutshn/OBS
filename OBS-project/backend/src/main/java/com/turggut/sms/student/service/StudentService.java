@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -46,7 +47,7 @@ public class StudentService {
             throw ApiException.conflict("duplicate_email", "Email already in use");
         }
 
-        String username = request.studentNumber().toLowerCase();
+        String username = request.studentNumber().toLowerCase(Locale.ROOT);
         if (userRepository.existsByUsername(username)) {
             throw ApiException.conflict("duplicate_username", "Username already in use");
         }

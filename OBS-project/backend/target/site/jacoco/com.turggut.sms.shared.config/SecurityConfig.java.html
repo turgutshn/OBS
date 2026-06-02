@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="tr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecurityConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">sms-backend</a> &gt; <a href="index.source.html" class="el_package">com.turggut.sms.shared.config</a> &gt; <span class="el_source">SecurityConfig.java</span></div><h1>SecurityConfig.java</h1><pre class="source lang-java linenums">package com.turggut.sms.shared.config;
+
+import com.turggut.sms.shared.security.JwtAuthenticationFilter;
+import com.turggut.sms.shared.security.RateLimitingFilter;
+import com.turggut.sms.shared.security.RequestIdFilter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
+
+@Configuration
+@EnableMethodSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtFilter;
+    private final RequestIdFilter requestIdFilter;
+    private final RateLimitingFilter rateLimitingFilter;
+    private final AppProperties appProperties;
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+<span class="fc" id="L44">        return new BCryptPasswordEncoder(12);</span>
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider(UserDetailsService uds,
+                                                            PasswordEncoder encoder) {
+<span class="fc" id="L50">        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();</span>
+<span class="fc" id="L51">        provider.setUserDetailsService(uds);</span>
+<span class="fc" id="L52">        provider.setPasswordEncoder(encoder);</span>
+<span class="fc" id="L53">        provider.setHideUserNotFoundExceptions(true);</span>
+<span class="fc" id="L54">        return provider;</span>
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
+<span class="fc" id="L59">        return cfg.getAuthenticationManager();</span>
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+<span class="fc" id="L64">        CorsConfiguration cfg = new CorsConfiguration();</span>
+<span class="fc" id="L65">        cfg.setAllowedOrigins(appProperties.security().cors().allowedOrigins());</span>
+<span class="fc" id="L66">        cfg.setAllowedMethods(List.of(&quot;GET&quot;, &quot;POST&quot;, &quot;PUT&quot;, &quot;PATCH&quot;, &quot;DELETE&quot;, &quot;OPTIONS&quot;));</span>
+<span class="fc" id="L67">        cfg.setAllowedHeaders(List.of(&quot;Authorization&quot;, &quot;Content-Type&quot;, &quot;X-Request-Id&quot;));</span>
+<span class="fc" id="L68">        cfg.setExposedHeaders(List.of(&quot;X-Request-Id&quot;));</span>
+<span class="fc" id="L69">        cfg.setAllowCredentials(true);</span>
+<span class="fc" id="L70">        cfg.setMaxAge(3600L);</span>
+<span class="fc" id="L71">        UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();</span>
+<span class="fc" id="L72">        src.registerCorsConfiguration(&quot;/**&quot;, cfg);</span>
+<span class="fc" id="L73">        return src;</span>
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+<span class="fc" id="L78">        http</span>
+<span class="fc" id="L79">            .csrf(csrf -&gt; csrf.disable())</span>
+<span class="fc" id="L80">            .cors(cors -&gt; {})</span>
+<span class="fc" id="L81">            .sessionManagement(s -&gt; s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))</span>
+<span class="fc" id="L82">            .exceptionHandling(eh -&gt; eh.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))</span>
+<span class="fc" id="L83">            .headers(headers -&gt; headers</span>
+<span class="fc" id="L84">                .contentTypeOptions(o -&gt; {})</span>
+<span class="fc" id="L85">                .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)</span>
+<span class="fc" id="L86">                .xssProtection(x -&gt; {})</span>
+<span class="fc" id="L87">                .httpStrictTransportSecurity(h -&gt; h.includeSubDomains(true).maxAgeInSeconds(31536000))</span>
+<span class="fc" id="L88">                .referrerPolicy(r -&gt; r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))</span>
+<span class="fc" id="L89">                .contentSecurityPolicy(c -&gt; c.policyDirectives(&quot;default-src 'self'; frame-ancestors 'none'&quot;))</span>
+            )
+<span class="fc" id="L91">            .authorizeHttpRequests(auth -&gt; auth</span>
+<span class="fc" id="L92">                .requestMatchers(&quot;/api/auth/login&quot;, &quot;/api/auth/refresh&quot;).permitAll()</span>
+<span class="fc" id="L93">                .requestMatchers(&quot;/actuator/health&quot;, &quot;/actuator/info&quot;).permitAll()</span>
+<span class="fc" id="L94">                .requestMatchers(&quot;/v3/api-docs/**&quot;, &quot;/swagger-ui/**&quot;, &quot;/swagger-ui.html&quot;).permitAll()</span>
+<span class="fc" id="L95">                .requestMatchers(HttpMethod.OPTIONS, &quot;/**&quot;).permitAll()</span>
+<span class="fc" id="L96">                .requestMatchers(&quot;/api/admin/**&quot;).hasRole(&quot;ADMIN&quot;)</span>
+<span class="fc" id="L97">                .requestMatchers(&quot;/api/teacher/**&quot;).hasAnyRole(&quot;ADMIN&quot;, &quot;TEACHER&quot;)</span>
+<span class="fc" id="L98">                .anyRequest().authenticated())</span>
+<span class="fc" id="L99">            .addFilterBefore(requestIdFilter, UsernamePasswordAuthenticationFilter.class)</span>
+<span class="fc" id="L100">            .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)</span>
+<span class="fc" id="L101">            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)</span>
+<span class="fc" id="L102">            .formLogin(f -&gt; f.disable())</span>
+<span class="fc" id="L103">            .httpBasic(b -&gt; b.disable());</span>
+
+<span class="fc" id="L105">        return http.build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

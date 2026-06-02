@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +32,7 @@ public class CourseService {
             throw ApiException.conflict("duplicate_code", "Course code already exists");
         }
         Course course = Course.builder()
-                .code(request.code().toUpperCase())
+                .code(request.code().toUpperCase(Locale.ROOT))
                 .name(request.name())
                 .description(request.description())
                 .credits(request.credits())
@@ -54,7 +55,7 @@ public class CourseService {
                 && courseRepository.existsByCode(request.code())) {
             throw ApiException.conflict("duplicate_code", "Course code already exists");
         }
-        course.setCode(request.code().toUpperCase());
+        course.setCode(request.code().toUpperCase(Locale.ROOT));
         course.setName(request.name());
         course.setDescription(request.description());
         course.setCredits(request.credits());
